@@ -1,0 +1,20 @@
+{
+  "manifest_version": 3,
+  "name": "Cryptic Crossword Hints",
+  "description": "Provides hints for the Guardian Cryptic/Quiptic/Quick Cryptic.",
+  "version": "0.1",
+  "content_scripts": [
+    {
+      "js": ["src/content.js"],
+      "matches": [
+        "https://www.theguardian.com/crosswords/cryptic/*",
+        "https://www.theguardian.com/crosswords/quiptic/*",
+        "https://www.theguardian.com/crosswords/quick-cryptic/*"
+      ]
+    }
+  ],
+  "background": {
+    "service_worker": "src/background/background.js"
+  },
+  "host_permissions": ["https://*/"]
+}
