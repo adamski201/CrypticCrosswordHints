@@ -5,7 +5,8 @@ const loadingText = createLoadingText();
 const targetElement = document.querySelector(".crossword__controls_autosave_label");
 
 const divider = document.createElement('hr');
-divider.style.borderColor = "#D3D3D3";
+divider.style.backgroundColor = "#F1F1F1";
+divider.style.border = "none";
 
 targetElement.insertAdjacentElement("afterend", divider);
 
@@ -26,15 +27,18 @@ fetchFifteensquaredArticle(fetchMessage)
 
             loadingText.remove();
 
-            const hintButton = createHintButton();
+            const hintAllButton = createHintAllButton();
 
-            divider.insertAdjacentElement("afterend", hintButton);
+            const hintThisButton = createHintThisButton();
 
-            document.getElementById("activateButton").addEventListener("click", function () {
+            divider.insertAdjacentElement("afterend", hintAllButton);
+
+            hintAllButton.insertAdjacentElement("afterend", hintThisButton);
+
+            document.getElementById("hintAllButton").addEventListener("click", function () {
                 showDefinitions(definitions, clueElements);
             });
         } else {
-            console.log(`Fifteensquared article failed to retrieve.`);
             updateLoadingTextOnFailure(loadingText);
         }
 
@@ -148,29 +152,36 @@ function showDefinitions(definitions, clueElements) {
     })
 }
 
-function createHintButton() {
+function createHintAllButton() {
     const button = document.createElement('button');
-    button.style.backgroundColor = '#506991';
-    button.style.borderColor = '#506991';
-    button.style.borderWidth = "0.0625rem 0.0625rem 0.0625rem 0.0625rem";
-    button.style.borderStyle = "solid";
-    button.style.fontSize = "0.875rem";
-    button.style.fontFamily = "Helvetica Neue";
-    button.style.fontStyle = "italic";
+    button.classList.add("button");
+    button.classList.add("button--primary");
+    button.classList.add("button--crossword--current");
+    button.style.backgroundColor = "#506991";
+    button.style.borderColor = "#506991";
     button.textContent = 'Hint all';
-    button.id = 'activateButton';
+    button.id = 'hintAllButton';
+
+    return button;
+}
+
+function createHintThisButton() {
+    const button = document.createElement('button');
+    button.classList.add("button");
+    button.classList.add("button--primary");
+    button.classList.add("button--crossword--current");
+    button.style.backgroundColor = "#506991";
+    button.style.borderColor = "#506991";
+    button.textContent = 'Hint this';
+    button.id = 'hintThisButton';
 
     return button;
 }
 
 function createLoadingText() {
     const div = document.createElement('div');
-    div.style.fontFamily = "sans-serif";
-    div.textContent = 'Loading definition hints...';
-    div.style.lineHeight = "1.25rem";
-    div.style.fontSize = "0.875rem";
-    div.style.marginLeft = "0.3125rem";
-
+    div.classList.add("crossword__controls_autosave_label");
+    div.textContent = "Loading hints..."
     return div;
 }
 

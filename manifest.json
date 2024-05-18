@@ -6,6 +6,7 @@
   "content_scripts": [
     {
       "js": ["src/content.js"],
+      "run_at": "document_idle",
       "matches": [
         "https://www.theguardian.com/crosswords/cryptic/*",
         "https://www.theguardian.com/crosswords/quiptic/*",
