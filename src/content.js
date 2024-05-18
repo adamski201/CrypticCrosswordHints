@@ -5,9 +5,6 @@ hintButton = createHintButton()
 hintButton.disabled = true;
 const targetElement = document.querySelector(".crossword__controls_autosave_label");
 targetElement.replaceWith(hintButton);
-document.getElementById("activateButton").addEventListener("click", function () {
-    showDefinitions(definitions, clueElements);
-});
 
 // Get article metadata
 const author = document.querySelector('[rel="author"]').textContent
@@ -15,32 +12,28 @@ const crosswordId = window.location.href.split("/").at(-1);
 const crosswordType = window.location.href.split("/").at(-2);
 const articleDate = getFormattedArticleDate()
 
-let definitions;
-
-console.log("Extracting clues from page...")
-const clueElements = extractCluesFromHtml(document);
-console.log(`Found ${clueElements.length} clues.`)
+const clueElements = extractCluesFromGuardianHtml(document);
 
 const msg = {
-    action: "fetchData",
-    date: articleDate,
-    crosswordId: crosswordId,
-    crosswordType: crosswordType,
-    author: author
+    action: "fetchData", date: articleDate, crosswordId: crosswordId, crosswordType: crosswordType, author: author
 }
 
 console.log("Attempting to fetch html from fifteensquared.net...")
 fetchFifteensquaredArticle(msg)
-    .then(response => {
-        if (response) {
+    .then(htmlDoc => {
+        if (htmlDoc) {
             const article = document.createElement('div');
-            article.innerHTML = response;
-            definitions = extractDefinitionsFromHtml(article);
-            console.log(`Retrieved definitions; found ${definitions.length}.`)
-            updateHintButtonOnSuccessfulFetch()
+            article.innerHTML = htmlDoc;
+
+            let definitions = extractDefinitionsFromFifteensquaredHtml(article);
+
+            updateHintButtonOnSuccessfulFetch();
+            document.getElementById("activateButton").addEventListener("click", function () {
+                showDefinitions(definitions, clueElements);
+            });
         } else {
-            console.log(`Fifteensquared article failed to retrieve.`)
-            updateHintButtonOnFailedFetch()
+            console.log(`Fifteensquared article failed to retrieve.`);
+            updateHintButtonOnFailedFetch();
         }
 
     })
@@ -49,23 +42,37 @@ fetchFifteensquaredArticle(msg)
     });
 
 
-function extractDefinitionsFromHtml(htmlDoc) {
+function extractDefinitionsFromFifteensquaredHtml(htmlDoc) {
     const content = htmlDoc.querySelector(".entry-content");
 
     let underlineElements = content.querySelectorAll('u, [style*="underline"]');
 
-    // Get parents of the definition elements and remove duplicates.
-    let definitionElementParents = Array.from(underlineElements).map(ele => ele.parentElement)
-    definitionElementParents = definitionElementParents.filter(
-        (element, index, self) => self.indexOf(element) === index
-    );
+    let definitionElementParents = Array.from(underlineElements).map(ele => ele.parentElement);
+
+    // Remove duplicate elements.
+    definitionElementParents = definitionElementParents.filter((element, index, self) => self.indexOf(element) === index);
 
     const definitions = [];
 
     definitionElementParents.forEach(parent => {
-        let definitionElement = Array.from(parent.querySelectorAll(('u, [style*="underline"]')));
-        const definition = definitionElement.map(ele => ele.textContent)
-        definitions.push(definition)
+        let children = parent.children;
+        let definitionGroup = [];
+        let currentDefinition = "";
+
+        for (let i = 0; i < children.length; i++) {
+            if (children[i].tagName === 'u' || (children[i].hasAttribute('style') && children[i].getAttribute('style').includes('underline'))) {
+                currentDefinition = currentDefinition.concat(children[i].textContent);
+            } else if (currentDefinition) {
+                definitionGroup.push(currentDefinition);
+                currentDefinition = "";
+            }
+        }
+
+        if (currentDefinition) {
+            definitionGroup.push(currentDefinition);
+        }
+
+        definitions.push(definitionGroup);
     });
 
     if (definitions[0][0].toLowerCase() === "underlined") {
@@ -75,18 +82,16 @@ function extractDefinitionsFromHtml(htmlDoc) {
     return definitions;
 }
 
-function extractCluesFromHtml(htmlDoc) {
+function extractCluesFromGuardianHtml(htmlDoc) {
     const clues = htmlDoc.querySelectorAll(".crossword__clue");
 
     const clueElements = [];
 
     clues.forEach(function (clue) {
-        const num = clue.querySelector(".crossword__clue__number").textContent;
         clueElements.push(clue.querySelector(".crossword__clue__text"));
     });
 
     return clueElements;
-
 }
 
 function fetchFifteensquaredArticle(msg) {
@@ -104,17 +109,22 @@ function fetchFifteensquaredArticle(msg) {
 function showDefinitions(definitions, clueElements) {
     let definition_idx = 0;
     clueElements.forEach(ele => {
-        let clueText = ele.textContent;
+        let clueText = ele.textContent
+            .replaceAll(/\s{2,}/g, ' ')
+            .replaceAll("’", "'")
+            .trim()
+
         const clueDefinitions = definitions[definition_idx];
 
         let isMatched = false;
         clueDefinitions.forEach(definition => {
+            definition = definition.replaceAll(/\s{2,}/g, ' ')
+            definition = definition.replaceAll("’", "'")
             console.debug(`Attempting to match clue "${clueText}" with definition "${definition}"...`);
-            if (clueText.replaceAll(" ", "").includes(definition.replaceAll(" ", ""))) {
+            if (clueText.includes(definition)) {
                 console.debug("Matched!");
                 isMatched = true;
-                clueText = clueText.replace(/\s{2,}/g, ' '); // Replace duplicate whitespace with single
-                clueText = clueText.replace(definition.trim(), `<span style="text-decoration: underline;">${definition.trim()}</span>`);
+                clueText = clueText.replace(definition, `<span style="text-decoration: underline;">${definition}</span>`);
             } else {
                 console.debug(`No match found.`)
             }
@@ -129,21 +139,6 @@ function showDefinitions(definitions, clueElements) {
 }
 
 function createHintButton() {
-    const buttonHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Button Below Element Example</title>
-</head>
-<body>
-    <div id="targetElement">
-        <!-- Existing content -->
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>`
     const button = document.createElement('button');
     button.textContent = 'Loading definition hints...';
     button.id = 'activateButton';
@@ -171,12 +166,10 @@ function getFormattedArticleDate() {
     return `${year}/${month}/${day}`;
 }
 
-
 function updateHintButtonOnSuccessfulFetch() {
     hintButton.disabled = false;
     hintButton.textContent = "Get definition hints!";
 }
-
 
 function updateHintButtonOnFailedFetch() {
     hintButton.textContent = "No definitions available."
