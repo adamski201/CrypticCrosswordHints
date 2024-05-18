@@ -16,7 +16,7 @@ chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
             })
             .catch(error => {
                 console.error(`Error fetching URLs: ${error}`);
-                sendResponse(null); // Sending null response in case of error
+                sendResponse(null);
             });
 
         return true;

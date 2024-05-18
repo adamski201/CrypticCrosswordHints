@@ -1,39 +1,41 @@
 const article = document.querySelector("article");
 
-// Generate hint button and insert into page
-hintButton = createHintButton()
-hintButton.disabled = true;
+const loadingText = createLoadingText();
+
 const targetElement = document.querySelector(".crossword__controls_autosave_label");
-targetElement.replaceWith(hintButton);
 
-// Get article metadata
-const author = document.querySelector('[rel="author"]').textContent
-const crosswordId = window.location.href.split("/").at(-1);
-const crosswordType = window.location.href.split("/").at(-2);
-const articleDate = getFormattedArticleDate()
+const divider = document.createElement('hr');
+divider.style.borderColor = "#D3D3D3";
 
-const clueElements = extractCluesFromGuardianHtml(document);
+targetElement.insertAdjacentElement("afterend", divider);
 
-const msg = {
-    action: "fetchData", date: articleDate, crosswordId: crosswordId, crosswordType: crosswordType, author: author
-}
+divider.insertAdjacentElement("afterend", loadingText);
 
-console.log("Attempting to fetch html from fifteensquared.net...")
-fetchFifteensquaredArticle(msg)
-    .then(htmlDoc => {
-        if (htmlDoc) {
-            const article = document.createElement('div');
-            article.innerHTML = htmlDoc;
+const articleMetadata = getArticleMetadata();
 
-            let definitions = extractDefinitionsFromFifteensquaredHtml(article);
+const fetchMessage = createFetchMessage(articleMetadata);
 
-            updateHintButtonOnSuccessfulFetch();
+fetchFifteensquaredArticle(fetchMessage)
+    .then(htmlString => {
+        if (htmlString) {
+            const htmlDoc = parseHTMLStringToDOM(htmlString);
+
+            const definitions = extractDefinitionsFromFifteensquaredHtml(htmlDoc);
+
+            const clueElements = extractCluesFromGuardianHtml(document);
+
+            loadingText.remove();
+
+            const hintButton = createHintButton();
+
+            divider.insertAdjacentElement("afterend", hintButton);
+
             document.getElementById("activateButton").addEventListener("click", function () {
                 showDefinitions(definitions, clueElements);
             });
         } else {
             console.log(`Fifteensquared article failed to retrieve.`);
-            updateHintButtonOnFailedFetch();
+            updateLoadingTextOnFailure(loadingText);
         }
 
     })
@@ -55,14 +57,22 @@ function extractDefinitionsFromFifteensquaredHtml(htmlDoc) {
     const definitions = [];
 
     definitionElementParents.forEach(parent => {
-        let children = parent.children;
+        let children = parent.childNodes;
         let definitionGroup = [];
         let currentDefinition = "";
 
+        if (children[0].textContent[0] === " ") {
+            children[0].textContent = children[0].textContent.trimStart();
+        }
+
         for (let i = 0; i < children.length; i++) {
-            if (children[i].tagName === 'u' || (children[i].hasAttribute('style') && children[i].getAttribute('style').includes('underline'))) {
+            if (
+                children[i].tagName && (children[i].tagName === 'u' ||
+                (children[i].hasAttribute('style') && children[i].getAttribute('style').includes('underline')))
+            ) {
                 currentDefinition = currentDefinition.concat(children[i].textContent);
-            } else if (currentDefinition) {
+            }
+            else if (currentDefinition) {
                 definitionGroup.push(currentDefinition);
                 currentDefinition = "";
             }
@@ -140,10 +150,32 @@ function showDefinitions(definitions, clueElements) {
 
 function createHintButton() {
     const button = document.createElement('button');
-    button.textContent = 'Loading definition hints...';
+    button.style.backgroundColor = '#506991';
+    button.style.borderColor = '#506991';
+    button.style.borderWidth = "0.0625rem 0.0625rem 0.0625rem 0.0625rem";
+    button.style.borderStyle = "solid";
+    button.style.fontSize = "0.875rem";
+    button.style.fontFamily = "Helvetica Neue";
+    button.style.fontStyle = "italic";
+    button.textContent = 'Hint all';
     button.id = 'activateButton';
 
     return button;
+}
+
+function createLoadingText() {
+    const div = document.createElement('div');
+    div.style.fontFamily = "sans-serif";
+    div.textContent = 'Loading definition hints...';
+    div.style.lineHeight = "1.25rem";
+    div.style.fontSize = "0.875rem";
+    div.style.marginLeft = "0.3125rem";
+
+    return div;
+}
+
+function updateLoadingTextOnFailure(loadingText) {
+    loadingText.textContent = "No hints available for this crossword.";
 }
 
 function getFormattedArticleDate() {
@@ -166,11 +198,27 @@ function getFormattedArticleDate() {
     return `${year}/${month}/${day}`;
 }
 
-function updateHintButtonOnSuccessfulFetch() {
-    hintButton.disabled = false;
-    hintButton.textContent = "Get definition hints!";
+function parseHTMLStringToDOM(htmlString) {
+    const div = document.createElement('div');
+    div.innerHTML = htmlString;
+    return div;
 }
 
-function updateHintButtonOnFailedFetch() {
-    hintButton.textContent = "No definitions available."
+function getArticleMetadata() {
+    const author = document.querySelector('[rel="author"]').textContent;
+    const crosswordId = window.location.href.split("/").at(-1);
+    const crosswordType = window.location.href.split("/").at(-2);
+    const articleDate = getFormattedArticleDate();
+
+    return {author, crosswordId, crosswordType, articleDate};
+}
+
+function createFetchMessage(metadata) {
+    return {
+        action: "fetchData",
+        date: metadata.articleDate,
+        crosswordId: metadata.crosswordId,
+        crosswordType: metadata.crosswordType,
+        author: metadata.author
+    };
 }
