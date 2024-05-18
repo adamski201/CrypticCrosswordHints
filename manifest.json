@@ -16,5 +16,9 @@
   "background": {
     "service_worker": "src/background/background.js"
   },
-  "host_permissions": ["https://*/"]
+  "host_permissions": ["https://*/"],
+  "options_page": "src/options/options.html",
+  "action": {
+   "default_popup": "src/popup/index.html"
+ }
 }

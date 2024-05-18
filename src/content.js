@@ -102,11 +102,10 @@ function fetchFifteensquaredArticle(msg) {
 }
 
 function showDefinitions(definitions, clueElements) {
-    let i = 0;
-
+    let definition_idx = 0;
     clueElements.forEach(ele => {
         let clueText = ele.textContent;
-        const clueDefinitions = definitions[i];
+        const clueDefinitions = definitions[definition_idx];
 
         let isMatched = false;
         clueDefinitions.forEach(definition => {
@@ -114,7 +113,7 @@ function showDefinitions(definitions, clueElements) {
             if (clueText.replaceAll(" ", "").includes(definition.replaceAll(" ", ""))) {
                 console.debug("Matched!");
                 isMatched = true;
-                clueText = clueText.replace(/\s{2,}/g, ' ');
+                clueText = clueText.replace(/\s{2,}/g, ' '); // Replace duplicate whitespace with single
                 clueText = clueText.replace(definition.trim(), `<span style="text-decoration: underline;">${definition.trim()}</span>`);
             } else {
                 console.debug(`No match found.`)
@@ -124,7 +123,7 @@ function showDefinitions(definitions, clueElements) {
         ele.innerHTML = clueText;
 
         if (isMatched) {
-            i += 1;
+            definition_idx += 1;
         }
     })
 }
