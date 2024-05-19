@@ -13,18 +13,12 @@ fetchFifteensquaredArticle(fetchMessage)
             const htmlDoc = parseHTMLStringToDOM(htmlString);
 
             const definitions = extractDefinitionsFromFifteensquaredHtml(htmlDoc);
-            const clueElements = extractCluesFromGuardianHtml(document);
+            const grid = extractCluesFromGuardianHtml(document);
+            grid.generateUnderlinedClues(definitions);
 
-            const hintAllButton = createHintAllButton();
-            const hintThisButton = createHintThisButton();
+            const hintAllButton = createHintAllButton(grid);
 
             loadingText.replaceWith(hintAllButton);
-
-            insertElementAfter(hintAllButton, hintThisButton);
-
-            document.getElementById("hintAllButton").addEventListener("click", function () {
-                showDefinitions(definitions, clueElements);
-            });
         } else {
             updateLoadingTextOnFailure(loadingText);
         }
@@ -58,13 +52,9 @@ function extractDefinitionsFromFifteensquaredHtml(htmlDoc) {
         }
 
         for (let i = 0; i < children.length; i++) {
-            if (
-                children[i].tagName && (children[i].tagName === 'u' ||
-                (children[i].hasAttribute('style') && children[i].getAttribute('style').includes('underline')))
-            ) {
+            if (children[i].tagName && (children[i].tagName === 'u' || (children[i].hasAttribute('style') && children[i].getAttribute('style').includes('underline')))) {
                 currentDefinition = currentDefinition.concat(children[i].textContent);
-            }
-            else if (currentDefinition) {
+            } else if (currentDefinition) {
                 definitionGroup.push(currentDefinition);
                 currentDefinition = "";
             }
@@ -85,15 +75,21 @@ function extractDefinitionsFromFifteensquaredHtml(htmlDoc) {
 }
 
 function extractCluesFromGuardianHtml(htmlDoc) {
-    const clues = htmlDoc.querySelectorAll(".crossword__clue");
+    const grid = new Grid();
 
-    const clueElements = [];
+    const clueElements = htmlDoc.querySelectorAll(".crossword__clue");
 
-    clues.forEach(function (clue) {
-        clueElements.push(clue.querySelector(".crossword__clue__text"));
+    clueElements.forEach(function (clueElement) {
+        const clueNumber = parseInt(clueElement.querySelector(".crossword__clue__number").textContent);
+
+        const clueTextElement = clueElement.querySelector(".crossword__clue__text");
+
+        const clue = new Clue(clueTextElement, clueNumber, clueTextElement.innerHTML);
+
+        grid.clues.push(clue);
     });
 
-    return clueElements;
+    return grid;
 }
 
 function fetchFifteensquaredArticle(msg) {
@@ -108,39 +104,8 @@ function fetchFifteensquaredArticle(msg) {
     });
 }
 
-function showDefinitions(definitions, clueElements) {
-    let definition_idx = 0;
-    clueElements.forEach(ele => {
-        let clueText = ele.textContent
-            .replaceAll(/\s{2,}/g, ' ')
-            .replaceAll("’", "'")
-            .trim()
 
-        const clueDefinitions = definitions[definition_idx];
-
-        let isMatched = false;
-        clueDefinitions.forEach(definition => {
-            definition = definition.replaceAll(/\s{2,}/g, ' ')
-            definition = definition.replaceAll("’", "'")
-            console.debug(`Attempting to match clue "${clueText}" with definition "${definition}"...`);
-            if (clueText.includes(definition)) {
-                console.debug("Matched!");
-                isMatched = true;
-                clueText = clueText.replace(definition, `<span style="text-decoration: underline;">${definition}</span>`);
-            } else {
-                console.debug(`No match found.`)
-            }
-        });
-
-        ele.innerHTML = clueText;
-
-        if (isMatched) {
-            definition_idx += 1;
-        }
-    })
-}
-
-function createHintAllButton() {
+function createHintAllButton(grid) {
     const button = document.createElement('button');
     button.classList.add("button");
     button.classList.add("button--primary");
@@ -149,6 +114,10 @@ function createHintAllButton() {
     button.style.borderColor = "#506991";
     button.textContent = 'Hint all';
     button.id = 'hintAllButton';
+
+    button.addEventListener("click", function () {
+        grid.toggleAllHints();
+    });
 
     return button;
 }
@@ -231,14 +200,56 @@ function insertElementAfter(targetElement, newElement) {
 class Grid {
     constructor() {
         this.clues = [];
+        this.allHintsToggled = false;
+    }
+
+    generateUnderlinedClues(definitions) {
+        let definition_idx = 0;
+        this.clues.forEach(clue => {
+            let clueText = clue.element.textContent
+                .replaceAll(/\s{2,}/g, ' ')
+                .replaceAll("’", "'")
+                .trim();
+
+            const clueDefinitions = definitions[definition_idx];
+
+            let isMatched = false;
+            clueDefinitions.forEach(definition => {
+                definition = definition.replaceAll(/\s{2,}/g, ' ').replaceAll("’", "'")
+                console.debug(`Attempting to match clue "${clueText}" with definition "${definition}"...`);
+                if (clueText.includes(definition)) {
+                    console.debug("Matched!");
+                    isMatched = true;
+                    clueText = clueText.replace(definition, `<span style="text-decoration: underline;">${definition}</span>`);
+                } else {
+                    console.debug(`No match found.`)
+                }
+            });
+
+            clue.underlinedHtml = clueText;
+
+            if (isMatched) {
+                definition_idx += 1;
+            }
+        })
+    }
+
+    toggleAllHints() {
+        if (this.allHintsToggled) {
+            this.clues.forEach(clue => clue.element.innerHTML = clue.originalHtml);
+            this.allHintsToggled = false;
+        } else {
+            this.clues.forEach(clue => clue.element.innerHTML = clue.underlinedHtml);
+            this.allHintsToggled = true;
+        }
     }
 }
 
 class Clue {
-    constructor(element) {
-        this.element = element;
-        this.originalHtml = null;
+    constructor(clueElement, clueNumber, clueInnerHTML) {
+        this.element = clueElement;
+        this.originalHtml = clueInnerHTML;
+        this.number = clueNumber;
         this.underlinedHtml = null;
-        this.number = null;
     }
 }
