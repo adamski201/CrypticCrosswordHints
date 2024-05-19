@@ -2,11 +2,8 @@
 
 A Chrome extension that provides integrated hints for cryptic crosswords on the Guardian website.
 
-## Demo
-
-<p align="center">
-  <img src="resources/screenshots/popup.png" width="750" alt="Popup">
-</p>
+## Privacy Policy
+This extension does not collect any user data.
 
 ## License
 
