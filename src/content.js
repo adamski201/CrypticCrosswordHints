@@ -1,19 +1,10 @@
 const article = document.querySelector("article");
 
 const loadingText = createLoadingText();
-
-const targetElement = document.querySelector(".crossword__controls_autosave_label");
-
-const divider = document.createElement('hr');
-divider.style.backgroundColor = "#F1F1F1";
-divider.style.border = "none";
-
-targetElement.insertAdjacentElement("afterend", divider);
-
-divider.insertAdjacentElement("afterend", loadingText);
+const targetElement = document.querySelector(".crossword__controls__grid");
+insertElementAfter(targetElement, loadingText);
 
 const articleMetadata = getArticleMetadata();
-
 const fetchMessage = createFetchMessage(articleMetadata);
 
 fetchFifteensquaredArticle(fetchMessage)
@@ -22,18 +13,14 @@ fetchFifteensquaredArticle(fetchMessage)
             const htmlDoc = parseHTMLStringToDOM(htmlString);
 
             const definitions = extractDefinitionsFromFifteensquaredHtml(htmlDoc);
-
             const clueElements = extractCluesFromGuardianHtml(document);
 
-            loadingText.remove();
-
             const hintAllButton = createHintAllButton();
-
             const hintThisButton = createHintThisButton();
 
-            divider.insertAdjacentElement("afterend", hintAllButton);
+            loadingText.replaceWith(hintAllButton);
 
-            hintAllButton.insertAdjacentElement("afterend", hintThisButton);
+            insertElementAfter(hintAllButton, hintThisButton);
 
             document.getElementById("hintAllButton").addEventListener("click", function () {
                 showDefinitions(definitions, clueElements);
@@ -45,6 +32,7 @@ fetchFifteensquaredArticle(fetchMessage)
     })
     .catch(error => {
         console.error('Error:', error);
+        updateLoadingTextOnFailure(loadingText);
     });
 
 
@@ -186,7 +174,9 @@ function createLoadingText() {
 }
 
 function updateLoadingTextOnFailure(loadingText) {
-    loadingText.textContent = "No hints available for this crossword.";
+    loadingText.textContent = "No hints available for this crossword. \uD83D\uDEC8";
+    const hoverText = "This can happen when the Fifteensquared article has not been published yet, or it uses an unusual URI.";
+    loadingText.setAttribute("title", hoverText);
 }
 
 function getFormattedArticleDate() {
@@ -232,4 +222,23 @@ function createFetchMessage(metadata) {
         crosswordType: metadata.crosswordType,
         author: metadata.author
     };
+}
+
+function insertElementAfter(targetElement, newElement) {
+    targetElement.insertAdjacentElement("afterend", newElement);
+}
+
+class Grid {
+    constructor() {
+        this.clues = [];
+    }
+}
+
+class Clue {
+    constructor(element) {
+        this.element = element;
+        this.originalHtml = null;
+        this.underlinedHtml = null;
+        this.number = null;
+    }
 }
