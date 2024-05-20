@@ -8,17 +8,27 @@ const articleMetadata = getArticleMetadata();
 const fetchMessage = createFetchMessage(articleMetadata);
 
 fetchFifteensquaredArticle(fetchMessage)
-    .then(htmlString => {
-        if (htmlString) {
-            const htmlDoc = parseHTMLStringToDOM(htmlString);
+    .then(fifteensquaredHtmlString => {
+        if (fifteensquaredHtmlString) {
+            const fifteensquaredHtmlDoc = parseHTMLStringToDOM(fifteensquaredHtmlString);
+            const definitions = extractDefinitionsFromFifteensquaredHtml(fifteensquaredHtmlDoc);
 
-            const definitions = extractDefinitionsFromFifteensquaredHtml(htmlDoc);
             const grid = extractCluesFromGuardianHtml(document);
             grid.generateUnderlinedClues(definitions);
 
             const hintAllButton = createHintAllButton(grid);
 
             loadingText.replaceWith(hintAllButton);
+
+            const clueSelectionMutationTarget = document.querySelector(".crossword__clues");
+
+            if (clueSelectionMutationTarget.querySelector(".crossword__clue--selected")) {
+                const hintThisButton = createHintThisButton(grid);
+                insertElementAfter(hintAllButton, hintThisButton);
+            } else {
+                createClueSelectionMutationObserver(clueSelectionMutationTarget, hintAllButton, grid);
+            }
+
         } else {
             updateLoadingTextOnFailure(loadingText);
         }
@@ -104,7 +114,6 @@ function fetchFifteensquaredArticle(msg) {
     });
 }
 
-
 function createHintAllButton(grid) {
     const button = document.createElement('button');
     button.classList.add("button");
@@ -122,7 +131,7 @@ function createHintAllButton(grid) {
     return button;
 }
 
-function createHintThisButton() {
+function createHintThisButton(grid) {
     const button = document.createElement('button');
     button.classList.add("button");
     button.classList.add("button--primary");
@@ -131,6 +140,10 @@ function createHintThisButton() {
     button.style.borderColor = "#506991";
     button.textContent = 'Hint this';
     button.id = 'hintThisButton';
+
+    button.addEventListener("click", function () {
+        grid.toggleHintForSelectedClue();
+    });
 
     return button;
 }
@@ -197,6 +210,28 @@ function insertElementAfter(targetElement, newElement) {
     targetElement.insertAdjacentElement("afterend", newElement);
 }
 
+function createClueSelectionMutationObserver(mutationTarget, hintAllButton, grid) {
+    const config = {attributes: true, subtree: true};
+
+    const onAttributeChanged = (mutationList, observer) => {
+        for (const mutation of mutationList) {
+            if (mutation.type === "attributes") {
+                if (mutation.target.getAttribute("class").includes("crossword__clue--selected")) {
+                    console.log(`Clue selected.`);
+                    const hintThisButton = createHintThisButton(grid);
+                    insertElementAfter(hintAllButton, hintThisButton);
+                    observer.disconnect();
+                    break;
+                }
+            }
+        }
+    };
+
+    const clueSelectionObserver = new MutationObserver(onAttributeChanged);
+
+    clueSelectionObserver.observe(mutationTarget, config);
+}
+
 class Grid {
     constructor() {
         this.clues = [];
@@ -236,12 +271,25 @@ class Grid {
 
     toggleAllHints() {
         if (this.allHintsToggled) {
-            this.clues.forEach(clue => clue.element.innerHTML = clue.originalHtml);
+            this.clues.forEach(clue => {
+                clue.element.innerHTML = clue.originalHtml;
+                clue.hintToggled = false;
+            });
             this.allHintsToggled = false;
         } else {
-            this.clues.forEach(clue => clue.element.innerHTML = clue.underlinedHtml);
+            this.clues.forEach(clue => {
+                clue.element.innerHTML = clue.underlinedHtml;
+                clue.hintToggled = true;
+            });
             this.allHintsToggled = true;
         }
+    }
+
+    toggleHintForSelectedClue() {
+        const selectedClue = document.querySelector(".crossword__clue--selected");
+        const clueNumber = parseInt(selectedClue.querySelector(".crossword__clue__number").textContent);
+
+        this.clues.find(clue => clue.number === clueNumber).toggleHint();
     }
 }
 
@@ -251,5 +299,16 @@ class Clue {
         this.originalHtml = clueInnerHTML;
         this.number = clueNumber;
         this.underlinedHtml = null;
+        this.hintToggled = false;
+    }
+
+    toggleHint() {
+        if (this.hintToggled) {
+            this.element.innerHTML = this.originalHtml;
+            this.hintToggled = false;
+        } else {
+            this.element.innerHTML = this.underlinedHtml;
+            this.hintToggled = true;
+        }
     }
 }
