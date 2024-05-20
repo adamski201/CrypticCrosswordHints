@@ -1,4 +1,4 @@
-# Cryptic Crossword Hints ([DOWNLOAD](https://chrome.google.com/webstore/detail//TODO))
+# Cryptic Crossword Hints
 
 A Chrome extension to provide integrated hints for cryptic crosswords on the Guardian website. Currently works for the Guardian's Cryptic, Quiptic, and "Quick cryptic" puzzles.
 
