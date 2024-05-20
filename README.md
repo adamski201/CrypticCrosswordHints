@@ -4,7 +4,3 @@ A Chrome extension that provides integrated hints for cryptic crosswords on the 
 
 ## Privacy Policy
 This extension does not collect any user data.
-
-## License
-
-MIT © {{author}}
