@@ -5,7 +5,14 @@
   "version": "0.1",
   "content_scripts": [
     {
-      "js": ["src/content.js"],
+      "js": [
+        "src/content/guardianCrosswordHintManager.js",
+        "src/content/clue.js",
+        "src/content/grid.js",
+        "src/content/fifteensquaredScraper.js",
+        "src/content/guardianCrosswordPage.js",
+        "src/content/fifteensquaredPage.js",
+        "src/content/main.js"],
       "run_at": "document_idle",
       "matches": [
         "https://www.theguardian.com/crosswords/cryptic/*",
