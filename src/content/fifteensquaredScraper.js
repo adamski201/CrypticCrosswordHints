@@ -47,7 +47,7 @@ class FifteensquaredScraper {
      * Attempt to fetch an HTML string for a fifteensquared article that matches the provided URLs.
      * @returns {Promise<string>}
      */
-    fetchFifteensquaredArticle() {
+    fetchArticle() {
         return new Promise((resolve, reject) => {
             chrome.runtime.sendMessage({"possibleURLs": this.possibleURLs}, function (response) {
                 if (chrome.runtime.lastError) {

@@ -41,4 +41,8 @@ class GuardianCrosswordPage {
 
         this.grid = grid;
     }
+
+    isClueSelected() {
+        return this.htmlDoc.querySelector(".crossword__clue--selected");
+    }
 }

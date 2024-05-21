@@ -1,8 +1,8 @@
-const loadingText = createLoadingText();
-const targetElement = document.querySelector(".crossword__controls__grid");
-insertElementAfter(targetElement, loadingText);
-
 const guardianCrosswordPage = new GuardianCrosswordPage(document, window.location.href);
+const hintManager = new GuardianCrosswordHintManager(guardianCrosswordPage);
+
+hintManager.createLoadingText();
+hintManager.injectLoadingText();
 
 guardianCrosswordPage.extractArticleMetadata();
 
@@ -15,14 +15,16 @@ fifteensquaredScraper.getPossibleURLs(
     guardianCrosswordPage.crosswordType
 );
 
-fifteensquaredScraper.fetchFifteensquaredArticle()
+fifteensquaredScraper.fetchArticle()
     .then(fifteensquaredHtmlString => {
         if (!fifteensquaredHtmlString) {
-            updateLoadingTextOnFailure(loadingText);
+            hintManager.updateLoadingTextOnFailure();
             return;
         }
 
-        const fifteensquaredPage = new FifteensquaredPage(parseHTMLStringToDOM(fifteensquaredHtmlString));
+        const fifteensquaredPage = new FifteensquaredPage(
+            parseHTMLStringToDOM(fifteensquaredHtmlString)
+        );
 
         fifteensquaredPage.extractDefinitions();
 
@@ -30,102 +32,28 @@ fifteensquaredScraper.fetchFifteensquaredArticle()
 
         guardianCrosswordPage.grid.generateUnderlinedClues(fifteensquaredPage.definitions);
 
-        const hintAllButton = createHintAllButton(guardianCrosswordPage.grid);
+        hintManager.removeLoadingText();
 
-        loadingText.replaceWith(hintAllButton);
+        hintManager.createHintAllButton(guardianCrosswordPage.grid);
+        hintManager.injectHintAllButton();
 
-        const clueSelectionMutationTarget = document.querySelector(".crossword__clues");
+        hintManager.createHintThisButton(guardianCrosswordPage.grid);
 
-        if (clueSelectionMutationTarget.querySelector(".crossword__clue--selected")) {
-            const hintThisButton = createHintThisButton(guardianCrosswordPage.grid);
-            insertElementAfter(hintAllButton, hintThisButton);
+        if (guardianCrosswordPage.isClueSelected()) {
+            hintManager.injectHintThisButton();
         } else {
-            createClueSelectionMutationObserver(clueSelectionMutationTarget, hintAllButton, guardianCrosswordPage.grid);
+            hintManager.createClueSelectionMutationObserver();
         }
 
     })
     .catch(error => {
         console.error('Error:', error);
-        updateLoadingTextOnFailure(loadingText);
+        hintManager.updateLoadingTextOnFailure();
     });
-
-
-function createHintAllButton(grid) {
-    const button = document.createElement('button');
-    button.classList.add("button");
-    button.classList.add("button--primary");
-    button.classList.add("button--crossword--current");
-    button.style.backgroundColor = "#506991";
-    button.style.borderColor = "#506991";
-    button.textContent = 'Hint all';
-    button.id = 'hintAllButton';
-
-    button.addEventListener("click", function () {
-        grid.toggleAllHints();
-    });
-
-    return button;
-}
-
-function createHintThisButton(grid) {
-    const button = document.createElement('button');
-    button.classList.add("button");
-    button.classList.add("button--primary");
-    button.classList.add("button--crossword--current");
-    button.style.backgroundColor = "#506991";
-    button.style.borderColor = "#506991";
-    button.textContent = 'Hint this';
-    button.id = 'hintThisButton';
-
-    button.addEventListener("click", function () {
-        grid.toggleHintForSelectedClue();
-    });
-
-    return button;
-}
-
-function createLoadingText() {
-    const div = document.createElement('div');
-    div.classList.add("crossword__controls_autosave_label");
-    div.textContent = "Loading hints..."
-    return div;
-}
-
-function updateLoadingTextOnFailure(loadingText) {
-    loadingText.textContent = "No hints available for this crossword. \uD83D\uDEC8";
-    const hoverText = "This can happen when the Fifteensquared article has not been published yet, or it uses an unusual URI.";
-    loadingText.setAttribute("title", hoverText);
-}
 
 function parseHTMLStringToDOM(htmlString) {
     const div = document.createElement('div');
     div.innerHTML = htmlString;
     return div;
-}
-
-function insertElementAfter(targetElement, newElement) {
-    targetElement.insertAdjacentElement("afterend", newElement);
-}
-
-function createClueSelectionMutationObserver(mutationTarget, hintAllButton, grid) {
-    const config = {attributes: true, subtree: true};
-
-    const onAttributeChanged = (mutationList, observer) => {
-        for (const mutation of mutationList) {
-            if (mutation.type === "attributes") {
-                if (mutation.target.getAttribute("class").includes("crossword__clue--selected")) {
-                    console.log(`Clue selected.`);
-                    const hintThisButton = createHintThisButton(grid);
-                    insertElementAfter(hintAllButton, hintThisButton);
-                    observer.disconnect();
-                    break;
-                }
-            }
-        }
-    };
-
-    const clueSelectionObserver = new MutationObserver(onAttributeChanged);
-
-    clueSelectionObserver.observe(mutationTarget, config);
 }
 
