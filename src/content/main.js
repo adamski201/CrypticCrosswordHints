@@ -1,59 +1,54 @@
-const guardianCrosswordPage = new GuardianCrosswordPage(document, window.location.href);
-const hintManager = new GuardianCrosswordHintManager(guardianCrosswordPage);
+setTimeout(func => {
+    const guardianCrosswordPage = new GuardianCrosswordPage(document, window.location.href);
+    const hintManager = new GuardianCrosswordHintManager(guardianCrosswordPage);
 
-hintManager.createLoadingText();
-hintManager.injectLoadingText();
+    hintManager.createLoadingText();
+    hintManager.injectLoadingText();
 
-guardianCrosswordPage.extractArticleMetadata();
+    guardianCrosswordPage.extractArticleMetadata();
 
-const fifteensquaredScraper = new FifteensquaredScraper();
+    const fifteensquaredScraper = new FifteensquaredScraper();
 
-fifteensquaredScraper.getPossibleURLs(
-    guardianCrosswordPage.articleDate,
-    guardianCrosswordPage.crosswordId,
-    guardianCrosswordPage.author,
-    guardianCrosswordPage.crosswordType
-);
+    fifteensquaredScraper.getPossibleURLs(
+        guardianCrosswordPage.articleDate,
+        guardianCrosswordPage.crosswordId,
+        guardianCrosswordPage.author,
+        guardianCrosswordPage.crosswordType
+    );
 
-fifteensquaredScraper.fetchArticle()
-    .then(fifteensquaredHtmlString => {
-        if (!fifteensquaredHtmlString) {
+    fifteensquaredScraper.fetchArticle()
+        .then(fifteensquaredHtmlString => {
+            if (!fifteensquaredHtmlString) {
+                hintManager.updateLoadingTextOnFailure();
+                return;
+            }
+
+            guardianCrosswordPage.extractClues();
+
+            const fifteensquaredPage = new FifteensquaredPage(fifteensquaredHtmlString);
+
+            const definitions = fifteensquaredPage.extractDefinitions();
+
+            guardianCrosswordPage.grid.generateUnderlinedClues(definitions);
+
+            hintManager.removeLoadingText();
+
+            hintManager.createHintAllButton(guardianCrosswordPage.grid);
+            hintManager.injectHintAllButton();
+
+            hintManager.createHintThisButton(guardianCrosswordPage.grid);
+
+            if (guardianCrosswordPage.isClueSelected()) {
+                hintManager.injectHintThisButton();
+            } else {
+                hintManager.createClueSelectionMutationObserver();
+            }
+
+        })
+        .catch(error => {
+            console.error('Error:', error);
             hintManager.updateLoadingTextOnFailure();
-            return;
-        }
+        });
 
-        const fifteensquaredPage = new FifteensquaredPage(
-            parseHTMLStringToDOM(fifteensquaredHtmlString)
-        );
-
-        fifteensquaredPage.extractDefinitions();
-
-        guardianCrosswordPage.extractClues();
-
-        guardianCrosswordPage.grid.generateUnderlinedClues(fifteensquaredPage.definitions);
-
-        hintManager.removeLoadingText();
-
-        hintManager.createHintAllButton(guardianCrosswordPage.grid);
-        hintManager.injectHintAllButton();
-
-        hintManager.createHintThisButton(guardianCrosswordPage.grid);
-
-        if (guardianCrosswordPage.isClueSelected()) {
-            hintManager.injectHintThisButton();
-        } else {
-            hintManager.createClueSelectionMutationObserver();
-        }
-
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        hintManager.updateLoadingTextOnFailure();
-    });
-
-function parseHTMLStringToDOM(htmlString) {
-    const div = document.createElement('div');
-    div.innerHTML = htmlString;
-    return div;
-}
+}, 3000);
 

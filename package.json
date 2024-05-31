@@ -1,5 +1,5 @@
 {
-  "devDependencies": {
-    "jest": "^29.7.0"
+  "dependencies": {
+    "@types/chrome": "^0.0.268"
   }
 }

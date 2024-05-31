@@ -32,30 +32,31 @@ class FifteensquaredScraper {
     getPossibleURLs(date, crosswordID, author, crosswordType) {
         const formattedDate = this.formatDateAsURL(date);
 
-        this.possibleURLs = [
-            `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-${crosswordID}-${author}`,
-            `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-${crosswordID}-by-${author}`,
-            `https://www.fifteensquared.net/${formattedDate}/${crosswordType}-${crosswordID}-${author}`,
-            `https://www.fifteensquared.net/${formattedDate}/${crosswordType}-${crosswordID}-by-${author}`,
-            `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordID}-${author}`,
-            `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-no-${crosswordID}-by-${author}`,
-            `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-no-${crosswordID}-${author}`
-        ];
+        this.possibleURLs = [`https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-${crosswordID}-${author}`, `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-${crosswordID}-by-${author}`, `https://www.fifteensquared.net/${formattedDate}/${crosswordType}-${crosswordID}-${author}`, `https://www.fifteensquared.net/${formattedDate}/${crosswordType}-${crosswordID}-by-${author}`, `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordID}-${author}`, `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-no-${crosswordID}-by-${author}`, `https://www.fifteensquared.net/${formattedDate}/guardian-${crosswordType}-no-${crosswordID}-${author}`];
     }
 
     /**
      * Attempt to fetch an HTML string for a fifteensquared article that matches the provided URLs.
-     * @returns {Promise<string>}
+     * @returns {Promise<HTMLDivElement>}
      */
-    fetchArticle() {
-        return new Promise((resolve, reject) => {
-            chrome.runtime.sendMessage({"possibleURLs": this.possibleURLs}, function (response) {
-                if (chrome.runtime.lastError) {
-                    reject(chrome.runtime.lastError);
-                } else {
-                    resolve(response);
-                }
-            });
-        });
+    async fetchArticle() {
+        try {
+            const fifteensquaredHtmlString = await chrome.runtime.sendMessage({"possibleURLs": this.possibleURLs});
+            if (!fifteensquaredHtmlString) {
+                return null;
+            }
+
+            return this.parseHTMLStringToDOM(fifteensquaredHtmlString);
+        } catch (error) {
+            console.error('Error:', error);
+            return null;
+        }
     }
+
+    parseHTMLStringToDOM(htmlString) {
+        const div = document.createElement('div');
+        div.innerHTML = htmlString;
+        return div;
+    }
+
 }
